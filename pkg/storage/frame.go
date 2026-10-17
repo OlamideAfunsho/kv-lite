@@ -103,3 +103,10 @@ func DecodeRecord(buf []byte) (*Record, error) {
 		Value: val,
 	}, nil
 }
+
+// DecodeHeaderLengths extracts key length and value length from a 16-byte fixed header slice.
+func DecodeHeaderLengths(headerBuf []byte) (int, int) {
+	keyLen := int(binary.BigEndian.Uint16(headerBuf[12:14]))
+	valLen := int(binary.BigEndian.Uint16(headerBuf[14:16]))
+	return keyLen, valLen
+}
