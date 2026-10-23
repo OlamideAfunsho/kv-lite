@@ -55,30 +55,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	memTable := storage.NewMemTable()
 
-	fmt.Println("--- Writing Records to WAL ---")
+	fmt.Println("--- Writing & Setting Data ---")
 
-	// Write entry 1
-	frame1, _ := storage.EncodeRecord([]byte("user_1"), []byte("Olamide"))
-	if err := wal.Write(frame1); err != nil {
-		panic(err)
-	}
-	fmt.Println("Appended key: user_1")
+	// Write key 1
+	k1, v1 := []byte("theme"), []byte("dark")
+	frame1, _ := storage.EncodeRecord(k1, v1)
+	wal.Write(frame1)
+	memTable.Set(k1, v1)
+	fmt.Println("Set theme = dark")
 
-	// Write entry 2
-	frame2, _ := storage.EncodeRecord([]byte("user_2"), []byte("Prodigy"))
-	if err := wal.Write(frame2); err != nil {
-		panic(err)
-	}
-	fmt.Println("Appended key: user_2")
+	// Write key 2
+	k2, v2 := []byte("version"), []byte("v1.0.0")
+	frame2, _ := storage.EncodeRecord(k2, v2)
+	wal.Write(frame2)
+	memTable.Set(k2, v2)
+	fmt.Println("Set version = v1.0.0")
 
-	// Close the file to simulate system shutdown
+	// Close WAL to simulate shutdown
 	wal.Close()
-	fmt.Println("Simulated system shutdown (WAL file closed). \n")
+	fmt.Println("\nSimulated system shutdown...\n")
 
-
-	// Re-open WAL to test crash recovery pipeline
-	fmt.Println("--- Recovering State on Database Reboot ---")
+	// Reboot: Recover WAL and load into a fresh MemTable
+	fmt.Println("--- Rebooting & Recovering State ---")
 	recoveredWAL, err := storage.OpenWAL(walPath)
 	if err != nil {
 		panic(err)
@@ -90,9 +90,56 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Successfully recovered %d records from WAL file on disk:\n", len(records))
-	for i, rec := range records {
-		fmt.Printf(" Record %d -> Key: %s, Value: %s, Timestamp: %d\n", i+1, string(rec.Key), string(rec.Value), rec.Timestamp)
+	freshMemTable := storage.NewMemTable()
+	freshMemTable.LoadFromWAL(records)
+
+	// Query fresh MemTable
+	if val, ok := freshMemTable.Get([]byte("theme")); ok {
+		fmt.Printf("Get 'theme': %s\n", string(val))
 	}
+	if val, ok := freshMemTable.Get([]byte("version")); ok {
+		fmt.Printf("Get 'version': %s\n", string(val))
+	}
+
+
+
+	// fmt.Println("--- Writing Records to WAL ---")
+
+	// // Write entry 1
+	// frame1, _ := storage.EncodeRecord([]byte("user_1"), []byte("Olamide"))
+	// if err := wal.Write(frame1); err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("Appended key: user_1")
+
+	// // Write entry 2
+	// frame2, _ := storage.EncodeRecord([]byte("user_2"), []byte("Prodigy"))
+	// if err := wal.Write(frame2); err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("Appended key: user_2")
+
+	// // Close the file to simulate system shutdown
+	// wal.Close()
+	// fmt.Println("Simulated system shutdown (WAL file closed). \n")
+
+
+	// // Re-open WAL to test crash recovery pipeline
+	// fmt.Println("--- Recovering State on Database Reboot ---")
+	// recoveredWAL, err := storage.OpenWAL(walPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer recoveredWAL.Close()
+
+	// records, err := recoveredWAL.ReadAll()
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// fmt.Printf("Successfully recovered %d records from WAL file on disk:\n", len(records))
+	// for i, rec := range records {
+	// 	fmt.Printf(" Record %d -> Key: %s, Value: %s, Timestamp: %d\n", i+1, string(rec.Key), string(rec.Value), rec.Timestamp)
+	// }
 
 }
