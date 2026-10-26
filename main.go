@@ -146,10 +146,10 @@ func main() {
 	os.Remove(sstablePath)
 
 	// Initialize a MemTable and insert unsorted keys
-	memTable := storage.NewMemTable()
-	memTable.Set([]byte("Olamide"), []byte("name"))
-	memTable.Set([]byte("Male"), []byte("gender"))
-	memTable.Set([]byte("21"), []byte("age"))
+	// memTable := storage.NewMemTable()
+	// memTable.Set([]byte("Olamide"), []byte("name"))
+	// memTable.Set([]byte("Male"), []byte("gender"))
+	// memTable.Set([]byte("21"), []byte("age"))
 
 	fmt.Println("--- Flushing MemTable to SSTable ---")
 
@@ -161,18 +161,41 @@ func main() {
 		"21": []byte("age"),
 	}
 
-	err := storage.WriteSSTable(sstablePath, data)
+	fmt.Println("--- Writing SSTable and Generating Sparse Index ---")
+	index, err := storage.WriteSSTable(sstablePath, data)
 	if err != nil {
 		panic(err)
+	}
+
+	fmt.Println("Generated Sparse Index Entries:")
+	for _, entry := range index {
+		fmt.Printf(" Key: '%s' -> Disk Byte Offset: %d\n", entry.Key, entry.Offset)
+	}
+
+	fmt.Println("\n--- Testing Direct Disk Seek & Read ---")
+	var targetOffset int64 = -1
+	for _, entry := range index {
+		if entry.Key == "Male" {
+			targetOffset = entry.Offset
+			break
+		}
+	}
+
+	if targetOffset != -1 {
+		record, err := storage.ReadSSTableRecord(sstablePath, targetOffset)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Successfully read from disk! Key: %s, Value: %s\n", string(record.Key), string(record.Value))
 	}
 
 	// Verify file exists and has size
-	fileInfo, err := os.Stat(sstablePath)
-	if err != nil {
-		panic(err)
-	}
+	// fileInfo, err := os.Stat(sstablePath)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	fmt.Printf("Successfully flushed SSTable to disk: %s\n", fileInfo.Name())
-	fmt.Printf("SSTable file size: %d bytes\n", fileInfo.Size())
+	// fmt.Printf("Successfully flushed SSTable to disk: %s\n", fileInfo.Name())
+	// fmt.Printf("SSTable file size: %d bytes\n", fileInfo.Size())
 
 }
