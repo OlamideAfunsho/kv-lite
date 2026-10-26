@@ -7,6 +7,46 @@ import (
 )
 
 func main() {
+	dbDir := "./data"
+
+	// Cleanup previous test run data directory
+	os.RemoveAll(dbDir)
+
+	fmt.Println("--- Step 1: Opening Database & Writing Data ---")
+	db, err := storage.OpenDB(dbDir)
+	if err != nil {
+		panic(err)
+	}
+
+	// Set some keys
+	db.Set([]byte("username"), []byte("olamide_prodigy"))
+	db.Set([]byte("role"), []byte("systems_engineer"))
+	fmt.Println("Written: username = olamide_prodigy")
+	fmt.Println("Written: role = systems_engineer")
+
+	// Simulate system shutdown by closing database handle
+	db.Close()
+	fmt.Println("\nDatabase closed (simulating crash/shutdown).\n")
+
+	fmt.Println("--- Step 2: Reopening Database (Testing Crash Recovery) ---")
+	reopenedDB, err := storage.OpenDB(dbDir)
+	if err != nil {
+		panic(err)
+	}
+	defer reopenedDB.Close()
+
+	// Read keys back from the recovered database engine
+	if val, ok := reopenedDB.Get([]byte("username")); ok {
+		fmt.Printf("Get 'username': %s\n", string(val))
+	}
+
+	if val, ok := reopenedDB.Get([]byte("role")); ok {
+		fmt.Printf("Get 'role': %s\n", string(val))
+	}
+
+
+
+
 	// key := []byte("user_001")
 	// val := []byte("Olamide")
 
@@ -142,8 +182,8 @@ func main() {
 	// 	fmt.Printf(" Record %d -> Key: %s, Value: %s, Timestamp: %d\n", i+1, string(rec.Key), string(rec.Value), rec.Timestamp)
 	// }
 
-	sstablePath := "sstable_1.db"
-	os.Remove(sstablePath)
+	// sstablePath := "sstable_1.db"
+	// os.Remove(sstablePath)
 
 	// Initialize a MemTable and insert unsorted keys
 	// memTable := storage.NewMemTable()
@@ -151,43 +191,43 @@ func main() {
 	// memTable.Set([]byte("Male"), []byte("gender"))
 	// memTable.Set([]byte("21"), []byte("age"))
 
-	fmt.Println("--- Flushing MemTable to SSTable ---")
+	// fmt.Println("--- Flushing MemTable to SSTable ---")
 
-	// Access internal map directly for flushing (or add an export method)
-	// Write an helper, or pass data directly
-	data := map[string][]byte{
-		"Olamide": []byte("name"),
-		"Male": []byte("gender"),
-		"21": []byte("age"),
-	}
+	// // Access internal map directly for flushing (or add an export method)
+	// // Write an helper, or pass data directly
+	// data := map[string][]byte{
+	// 	"Olamide": []byte("name"),
+	// 	"Male": []byte("gender"),
+	// 	"21": []byte("age"),
+	// }
 
-	fmt.Println("--- Writing SSTable and Generating Sparse Index ---")
-	index, err := storage.WriteSSTable(sstablePath, data)
-	if err != nil {
-		panic(err)
-	}
+	// fmt.Println("--- Writing SSTable and Generating Sparse Index ---")
+	// index, err := storage.WriteSSTable(sstablePath, data)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	fmt.Println("Generated Sparse Index Entries:")
-	for _, entry := range index {
-		fmt.Printf(" Key: '%s' -> Disk Byte Offset: %d\n", entry.Key, entry.Offset)
-	}
+	// fmt.Println("Generated Sparse Index Entries:")
+	// for _, entry := range index {
+	// 	fmt.Printf(" Key: '%s' -> Disk Byte Offset: %d\n", entry.Key, entry.Offset)
+	// }
 
-	fmt.Println("\n--- Testing Direct Disk Seek & Read ---")
-	var targetOffset int64 = -1
-	for _, entry := range index {
-		if entry.Key == "Male" {
-			targetOffset = entry.Offset
-			break
-		}
-	}
+	// fmt.Println("\n--- Testing Direct Disk Seek & Read ---")
+	// var targetOffset int64 = -1
+	// for _, entry := range index {
+	// 	if entry.Key == "Male" {
+	// 		targetOffset = entry.Offset
+	// 		break
+	// 	}
+	// }
 
-	if targetOffset != -1 {
-		record, err := storage.ReadSSTableRecord(sstablePath, targetOffset)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Successfully read from disk! Key: %s, Value: %s\n", string(record.Key), string(record.Value))
-	}
+	// if targetOffset != -1 {
+	// 	record, err := storage.ReadSSTableRecord(sstablePath, targetOffset)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	fmt.Printf("Successfully read from disk! Key: %s, Value: %s\n", string(record.Key), string(record.Value))
+	// }
 
 	// Verify file exists and has size
 	// fileInfo, err := os.Stat(sstablePath)
