@@ -1,2 +1,3 @@
-wal.log*
-sstable_1.db*
+data/
+*.log
+*.db
